@@ -51,7 +51,7 @@ target_variable <- "ChlorophyllMaximum_depth_sample"
 focal_site <- "fcre"
 
 obs_all <- targets |>
-  mutate(datetime = as_datetime(datetime)) |>
+  mutate(datetime = as_date(datetime)) |>
   filter(variable == target_variable, site_id == focal_site) |>
   select(datetime, site_id, observation)
 

@@ -30,8 +30,8 @@ forecast_date <- Sys.Date() - lubridate::days(1)
 sites <- c("fcre") #just FCR
 forecast_depths <- 'focal'
 
-forecast_horizon <- 34
-n_members <- 31
+forecast_horizon <- 31
+n_members <- 150
 calibration_start_date <- ymd("2022-11-11")
 model_id <- "fDCMdepth_mp"
 targets_url <- "https://amnh1.osn.mghpcc.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
@@ -45,7 +45,7 @@ for (i in sites){
   site <- i
   print(site)
   
-  output_folder <- paste0("./model_output/fDCMdepth_mp/", model_id, "_", site, "_", forecast_date, ".csv")
+  output_folder <- paste0("./model_output/", model_id, "_", site, "_", forecast_date, ".csv")
   
   ## run function
   forecast_output <- generate_DCMdepth_forecast(forecast_date = forecast_date,

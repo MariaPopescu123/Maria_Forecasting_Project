@@ -98,7 +98,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
     filter(variable %in% var)
 
   #this function tells me data availability
-  source("R/fDCMdepth_mp/data_availability_function.R")
+  source("R/data_availability_function.R")
 
   #what do we have
   # check <- all_targets |>
@@ -129,7 +129,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
   
   #ADDING THIS HERE FOR ADDITIONAL DATA NEED TO CHECK SHOULD GO BACK TO MAY 2024
   #NOT INCLUDED YET
-  fcre_reforecast2 <- arrow::s3_bucket(file.path("  bio230121-bucket01/fcre-reforecast/forecasts/parquet/site_id=fcre/model_id=glm_aed_flare_v3_reforecast"),
+  fcre_reforecast2 <- arrow::s3_bucket(file.path("bio230121-bucket01/fcre-reforecast/forecasts/parquet/site_id=fcre/model_id=glm_aed_flare_v3_reforecast"),
                                       endpoint_override = 'amnh1.osn.mghpcc.org',
                                       anonymous = TRUE)
   
@@ -144,8 +144,10 @@ generate_DCMdepth_forecast <- function(forecast_date,
   #Temp_C_mean (no schmidt stability or thermocline depth- would have to calculate using bathymetry)
   #secchi
 
-  # open the dataset once and reuse
-  flare_ds1 <- arrow::open_dataset(fcre_reforecast)
+  flare_ds1 <- arrow::open_dataset(list(
+    arrow::open_dataset(fcre_reforecast),
+    arrow::open_dataset(fcre_reforecast2))) #using both for an extra couple of data points but still just up to May 2024
+    #CHANGED HERE TO THE 2ND TO SEE 
   #start anytime after january 2021
   flare_ds <- flare_ds1|>
     mutate(reference_datetime = as_date(reference_datetime))|>
@@ -219,6 +221,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
 
   # future Schmidt stability per ensemble member from FLARE water temp profiles
   # uses bathymetry and temp-at-depth to compute daily Schmidt stability
+ ####future schmidt####
   future_schmidt_ens <- df_flare_new_forbind |>
     group_by(datetime_date, parameter) |>
     arrange(depth) |>
@@ -239,34 +242,17 @@ generate_DCMdepth_forecast <- function(forecast_date,
     mutate(datetime = as.Date(datetime_date)) |>
     select(datetime, parameter, Secchi_m_sample)
 
-  # combined future covariates
+  ###combined future covariates####
   future_covariates <- future_schmidt_ens |>
     full_join(future_secchi_ens, by = c("datetime", "parameter"))
 
-
-  #### Historic covariate####
-  #eventually thermocline depth
+  #### Historic covariates####
   #Schmidt stability
   #secchi
   #average air temperature (from NOAA)
   #average windspeed (from NOAA)
 
-  ####historic water temp#### not including this for now
-  # historic_temp_profiles <- readr::read_csv(targets_url, show_col_types = F) |>
-  #   filter(site_id %in% site,
-  #          datetime <= forecast_date,
-  #          variable == "Temp_C_mean")
-  # temp_pivot <- historic_temp_profiles|>
-  #   pivot_wider(names_from = variable, values_from = observation)|>
-  #   mutate(Date = as.Date(datetime))
-  # data_availability(temp_pivot, "Temp_C_mean")
-  # bathymetry data for if I want to make other calculations
-  #  #bathymetry data:
-  #bath <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1254/1/f7fa2a06e1229ee75ea39eb586577184")
-
-  ####historic secchi####
-  #REDOING HISTORIC SECCHI AND TEMP SO THAT IT'S COMING FROM FLARE####
-  #historic water temp####
+    #historic water temp####
   df_flare_new <- flare_ds |>
     filter(
       variable == "Temp_C_mean",
@@ -312,7 +298,8 @@ generate_DCMdepth_forecast <- function(forecast_date,
     mutate(parameter = as.numeric(parameter)) |>
     select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id)
   
-  # future Schmidt stability per ensemble member from FLARE water temp profiles
+  ####historic Schmidt stability####
+  #per ensemble member from FLARE water temp profiles
   # uses bathymetry and temp-at-depth to compute daily Schmidt stability
   historic_schmidt_ens <- df_flare_new_forbind |>
     group_by(datetime_date, parameter) |>
@@ -329,9 +316,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
     group_by(datetime)|>
     summarise(SchmidtStability_Jm2_mean = mean(SchmidtStability_Jm2_mean, na.rm = TRUE), .groups = "drop")
     
-    
-  
-  # future secchi per ensemble member from FLARE
+  # historic secchi per ensemble member from FLARE
   historic_secchi_ens <- secchi_flare_new_forbind |>
     group_by(datetime_date, parameter) |>
     summarise(Secchi_m_sample = mean(prediction, na.rm = TRUE), .groups = "drop") |>
@@ -341,14 +326,13 @@ generate_DCMdepth_forecast <- function(forecast_date,
     summarise(Secchi_m_sample = mean(Secchi_m_sample, na.rm = TRUE), .groups = "drop")
 
   
-  # combined future covariates
+  ####combined historic secchi and schmidt####
   historic_covariates <- historic_schmidt_ens |>
     full_join(historic_secchi_ens, by = c("datetime"))
 
   covariate_vars <- c("SchmidtStability_Jm2_mean", "Secchi_m_sample")
 
   
-
   #### Weather drivers ####
   #forecasted weather data
   # Get the forecasted weather data (shortwave, air temperature, wind components)
@@ -392,8 +376,6 @@ generate_DCMdepth_forecast <- function(forecast_date,
                                        endpoint_override = "amnh1.osn.mghpcc.org",
                                        anonymous = TRUE)
 
-  #push the aggregation into arrow and bound by calibration window so we don't
-  #drag the entire stage3 archive across the network
   historic_weather_raw <- arrow::open_dataset(historic_noaa_s3) |>
     filter(datetime < forecast_date,
            datetime >= as.Date(calibration_start_date),
@@ -442,17 +424,17 @@ generate_DCMdepth_forecast <- function(forecast_date,
     arrange(datetime)|>
     filter(!is.na(ChlorophyllMaximum_depth_sample))
   
-  # only keep predictors that actually exist in the data for this site
+  #only keep predictors that actually exist in the data for this site
   predictor_vars <- all_predictor_vars[all_predictor_vars %in% names(fit_df)]
   message(paste0('Using predictors: ', paste(predictor_vars, collapse = ", ")))
 
-  # remove NAs for ranger (cannot handle missing values)
+  #remove NAs for randomforest
   fit_df_noNA <- fit_df |>
     select(all_of(c(var, predictor_vars))) |>
     na.omit()
 
   #I technically only have 37 right now since 2024-10-01 is earliest FLARE output for temp and secchi
-  
+  #I have now combined the other FLARE output so I have some starting 2024-05
   message('Fitting random forest model')
   
   # 80/20 train/test split 
@@ -461,7 +443,6 @@ generate_DCMdepth_forecast <- function(forecast_date,
   trainData  <- fit_df_noNA[trainIndex, ]
   testData   <- fit_df_noNA[-trainIndex, ]
 
-  # fit ranger with quantile regression enabled for uncertainty estimation
   rf_formula <- reformulate(predictor_vars, response = var)
 
   #taking this straight from my DCM depth project 
@@ -518,9 +499,10 @@ generate_DCMdepth_forecast <- function(forecast_date,
   
  #look at Adrienne's! https://github.com/LTREB-reservoirs/vera4cast_models/blob/main/R/spcond_rf_abp/RF_model_helper.R
   # predict on test set and compute process uncertainty from residuals (from Adrienne)
+  # from Adrienne this is where prediction is actually happening
   testData$forecast_dcm <- predict(dcm_model, testData)
   residuals <- testData$forecast_dcm - testData[[var]]
-  sigma <- sd(residuals, na.rm = TRUE)
+  sigma <- sd(residuals, na.rm = TRUE) #this is my process uncertainty
   
   message(paste0('Process uncertainty (sigma): ', round(sigma, 3)))  
 
@@ -571,9 +553,9 @@ generate_DCMdepth_forecast <- function(forecast_date,
     drop_na()
   
   # predict mu, attach sigma
+  #also from Adrienne
   forecast_input$mu    <- round(predict(dcm_model, forecast_input), digits = 2)
   forecast_input$sigma <- round(sigma, digits = 2)
-  
   forecast_par <- forecast_input |>
     select(datetime, mu, sigma) |>
     pivot_longer(!datetime, names_to = "parameter", values_to = "prediction")  

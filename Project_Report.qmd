@@ -1,0 +1,49 @@
+---
+title: "Ecosystem Forecasting Project Report"
+format:
+  html:
+    embed-resources: true
+---
+
+Maria Popescu
+
+#Part 1 – Model Description
+##Model structure and rationale
+##Explanation of substantive novelty
+##Uncertainty sources and implementation
+##Responses from the registration form
+
+#Part 2 – Reforecast Analysis
+Definition
+A reforecast mimics real‑time forecasting for a past period.
+Required Properties
+Must span at least 1 year
+Each forecast must use only data available at its reference_datetime
+No future observations
+No observed covariates beyond the reference_datetime
+Only driver forecasts that would have been available at the time
+Data leakage invalidates the reforecast.
+Do not use the submit function in your reforecast code to avoid submission to the Challenge.
+
+Baseline Comparisons
+Baseline scores (climatology and persistence) are accessed directly from the challenge catalog; you do not generate them yourself.
+
+Performance evaluated across multiple axes:
+Forecast horizon
+Sites
+Season or time of year
+Comparison with baseline models
+Written interpretation of results
+
+
+
+
+
+#Part 3 – Reproducibility Checklist
+Include:
+model_id: "fDCMdepth_mp"
+GitHub repository link (this is a new repo): https://github.com/MariaPopescu123/Maria_Forecasting_Project  
+Link to forecast‑generation code
+Link to Quarto (.qmd) report
+Evidence of multiple automated forecasts
+Link to model entry in the challenge catalog
