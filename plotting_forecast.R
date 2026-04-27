@@ -12,6 +12,21 @@ summary_df <- forecast_output |>
     .groups = "drop"
   )
 
+# Spaghetti plot
+p0 <- forecast_output |>
+  mutate(parameter = as.factor(parameter)) |>
+  ggplot(aes(x = datetime, y = prediction, group = parameter)) +
+  geom_line(alpha = 0.25, linewidth = 0.4, color = "#1D9E75") +
+  labs(
+    title    = "DCM Depth Forecast - Ensemble members",
+    subtitle = paste0("Reference: ", unique(forecast_output$reference_datetime), " · fcre · n=", n_distinct(forecast_output$parameter)),
+    x        = NULL,
+    y        = "DCM Depth (m)"
+  ) +
+  scale_y_reverse() +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.minor = element_blank())
+
 # 1. Mean + ribbon
 p1 <- summary_df |>
   ggplot(aes(x = datetime)) +
@@ -28,4 +43,9 @@ p1 <- summary_df |>
   theme(panel.grid.minor = element_blank())
 
 p1
+p0
 
+check <- forecast_output |>
+  mutate(parameter = as.numeric(parameter))|>
+  group_by(datetime) |>
+  arrange(parameter, .by_group = TRUE)

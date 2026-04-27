@@ -7,7 +7,7 @@ format:
   
   THIS NEEDS TO BE EDITED FOR DCM DEPTH
   
-  Reforecast analysis 4/6/2025
+Reforecast analysis 4/6/2025
 Maria Popescu
 
 1.  Accessing climatology, persistence, and using MY MODEL for DCM depth
@@ -65,16 +65,17 @@ clim_all <- all_forecasts_full |>
   filter(!is.na(observation), !is.na(mean), !is.na(sd)) |>
   mutate(crps = crps_norm(y = observation, mean = mean, sd = sd)) |>
   select(reference_datetime, datetime, site_id, variable, model_id, crps)
+#family is normal here
 
 # Persistence models
-ens_all <- all_forecasts_full |>
+#family is also normal here
+pers_all <- all_forecasts_full |>
   filter(model_id == "persistenceRW",
          variable == target_variable) |>
   inner_join(obs_all, by = c("datetime", "site_id")) |>
-  filter(!is.na(observation), !is.na(prediction)) |>
-  group_by(reference_datetime, datetime, site_id, variable, model_id) |>
-  summarise(crps = crps_sample(y = unique(observation), dat = prediction),
-            .groups = "drop")
+  filter(!is.na(observation), !is.na(mean), !is.na(sd)) |>
+  mutate(crps = crps_norm(y = observation, mean = mean, sd = sd)) |>
+  select(reference_datetime, datetime, site_id, variable, model_id, crps)
 ```
 
 Now adding in my forecast

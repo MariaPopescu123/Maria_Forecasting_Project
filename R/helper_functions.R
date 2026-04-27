@@ -57,7 +57,8 @@ generate_DCMdepth_forecast <- function(forecast_date,
                                        var,
                                        site,
                                        forecast_depths = 'focal',
-                                       project_id = 'vera4cast') {
+                                       project_id = 'vera4cast', 
+                                       seed = NA) {
 
   # # ##FOR TESTING REMOVE WHEN DONE####
   # if(exists("curr_reference_datetime") == FALSE){
@@ -74,7 +75,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
   # forecast_depths <- 'focal'
   # 
   # forecast_horizon <- 34
-  # n_members <- 31
+  # n_members <- 150
   # calibration_start_date <- ymd("2022-11-11")
   # model_id <- "fDCMdepth_mp"
   # targets_url <- "https://amnh1.osn.mghpcc.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
@@ -83,7 +84,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
   # project_id <- "vera4cast"
   # 
   # site <- "fcre"
-  # output_folder <- paste0("./model_output/fDCMdepth_mp/", model_id, "_", site, "_", forecast_date, ".csv")
+  # output_folder <- paste0("./model_output/", model_id, "_", site, "_", forecast_date, ".csv")
   # # # ###THINGS TO REMOVE ENDS HERE
 
 
@@ -113,11 +114,11 @@ generate_DCMdepth_forecast <- function(forecast_date,
 
   # interpolate bathymetry to 0.1m resolution
   bth_depths_interp <- seq(min(bathFCR$Depth_m), max(bathFCR$Depth_m), by = 0.1)
-  bth_areas_interp  <- approx(x = bathFCR$Depth_m, y = bathFCR$SA_m2,
+  bth_areas_interp <- approx(x = bathFCR$Depth_m, y = bathFCR$SA_m2,
                               xout = bth_depths_interp, rule = 2)$y
 
   bth_depths <- bth_depths_interp
-  bth_areas  <- bth_areas_interp
+  bth_areas <- bth_areas_interp
 
 
   #### FLARE forecast covariates ####
@@ -147,7 +148,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
   flare_ds1 <- arrow::open_dataset(list(
     arrow::open_dataset(fcre_reforecast),
     arrow::open_dataset(fcre_reforecast2))) #using both for an extra couple of data points but still just up to May 2024
-    #CHANGED HERE TO THE 2ND TO SEE 
+    #CHANGED HERE TO INCLUDE BOTH VERSIONS OF FLARE
   #start anytime after january 2021
   flare_ds <- flare_ds1|>
     mutate(reference_datetime = as_date(reference_datetime))|>
@@ -156,7 +157,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
   #pull FLARE forecast issued on/just before forecast_date so the future
   #covariates actually align with the forecast horizon
   forecast_horizon_start <- as.POSIXct(forecast_date + 1, tz = "UTC")
-  forecast_ref_cutoff    <- as.POSIXct(forecast_date + 1, tz = "UTC")
+  forecast_ref_cutoff <- as.POSIXct(forecast_date + 1, tz = "UTC")
 
   #future water temp####
   flare_ref_temp <- flare_ds |>
@@ -169,7 +170,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
   df_flare_new <- flare_ds |>
     filter(
       variable == "Temp_C_mean",
-      parameter <= 31,
+      parameter <= n_members, #flare produces enough parameters weee
       reference_datetime == flare_ref_temp,
       datetime >= forecast_horizon_start
     ) |>
@@ -178,7 +179,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
   #not touched
   df_flare_new_forbind <- df_flare_new |>
     rename(datetime_date = datetime) |>
-    filter(parameter <= 31) |>
+    filter(parameter <= n_members) |>
     select(-reference_date) |>
     mutate(variable = "temperature",
            reference_datetime = as.character(reference_datetime),
@@ -192,14 +193,14 @@ generate_DCMdepth_forecast <- function(forecast_date,
     filter(variable == "secchi",
            reference_datetime <= forecast_ref_cutoff) |>
     summarise(max_ref = max(reference_datetime)) |>
-    collect() |>
+    collect()|>
     pull(max_ref)
 
   #could also just filter on horizon
   secchi_flare_new <- flare_ds |>
     filter(
       variable == "secchi",
-      parameter <= 31,
+      parameter <= n_members,
       reference_datetime == flare_ref_secchi,
       datetime >= forecast_horizon_start
     ) |>
@@ -207,7 +208,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
 
   secchi_flare_new_forbind <- secchi_flare_new |>
     rename(datetime_date = datetime) |>
-    filter(parameter <= 31) |>
+    filter(parameter <= n_members) |>
     select(-reference_date) |>
     mutate(variable = "secchi",
            reference_datetime = as.character(reference_datetime),
@@ -256,7 +257,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
   df_flare_new <- flare_ds |>
     filter(
       variable == "Temp_C_mean",
-      parameter <= 31,
+      parameter <= n_members,
       reference_datetime >= ymd("2021-01-05"),
       reference_datetime <= forecast_date,
       reference_datetime == datetime
@@ -266,7 +267,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
   #not touched
   df_flare_new_forbind <- df_flare_new |>
     rename(datetime_date = datetime) |>
-    filter(parameter <= 31) |>
+    filter(parameter <= n_members) |>
     select(-reference_date) |>
     mutate(variable = "temperature",
            reference_datetime = as.character(reference_datetime),
@@ -280,7 +281,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
   secchi_flare_new <- flare_ds |>
     filter(
       variable == "secchi",
-      parameter <= 31,
+      parameter <= n_members,
       reference_datetime >= ymd("2021-01-05"),
       reference_datetime <= forecast_date,
       reference_datetime == datetime
@@ -289,7 +290,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
   
   secchi_flare_new_forbind <- secchi_flare_new |>
     rename(datetime_date = datetime) |>
-    filter(parameter <= 31) |>
+    filter(parameter <= n_members) |>
     select(-reference_date) |>
     mutate(variable = "secchi",
            reference_datetime = as.character(reference_datetime),
@@ -438,7 +439,11 @@ generate_DCMdepth_forecast <- function(forecast_date,
   message('Fitting random forest model')
   
   # 80/20 train/test split 
-  #set.seed(123) I feel like I should be setting the seed for reproducibility? But not for now 
+  
+  if (isTRUE(seed == 'yes')) {
+    set.seed(123)
+  }
+
   trainIndex <- sample(1:nrow(fit_df_noNA), 0.8 * nrow(fit_df_noNA))
   trainData  <- fit_df_noNA[trainIndex, ]
   testData   <- fit_df_noNA[-trainIndex, ]
@@ -526,52 +531,58 @@ generate_DCMdepth_forecast <- function(forecast_date,
   message('Generating forecast')
   print(paste0('Running forecast starting on: ', forecast_date))
 
-  # ensemble drivers from FLARE to daily means (to decrease driver uncertainty)
-  forecast_input <- future_covariates |>
+  # FLARE covariates collapsed to daily means (not driver uncertainty here)
+  forecast_covariates <- future_covariates |>
     group_by(datetime) |>
     summarise(
       SchmidtStability_Jm2_mean = mean(SchmidtStability_Jm2_mean, na.rm = TRUE),
       Secchi_m_sample           = mean(Secchi_m_sample, na.rm = TRUE),
       .groups = "drop"
     )
-  
-  #weather drivers to daily means as well (might be too much decrease of driver uncertainty but we shall see)
+
+  # weather drivers per ensemble member (driver uncertainty here)
+  #this cycles available NOAA ensembles to fill n_members from prev assignment
+  weather_ensemble_names <- unique(forecast_weather$parameter)
+  repeat_ens <- rep(weather_ensemble_names, length.out = n_members)
+  ens_map <- tibble(ensemble_member = 1:n_members, parameter = repeat_ens)
+
   weather_input <- forecast_weather |>
     filter(variable %in% c("air_temperature", "wind_speed"),
            ymd(reference_datetime) == forecast_date) |>
-    group_by(datetime_date, variable) |>
-    summarise(pred = mean(prediction, na.rm = TRUE), .groups = "drop") |>
-    pivot_wider(names_from = variable, values_from = pred) |>
+    select(datetime_date, parameter, variable, prediction) |>
+    pivot_wider(names_from = variable, values_from = prediction) |>
     rename(datetime = datetime_date) |>
-    mutate(datetime = as.Date(datetime))
-  
-  # join all drivers and add doy
-  forecast_input <- forecast_input |>
-    left_join(weather_input, by = "datetime") |>
+    mutate(datetime = as.Date(datetime)) |>
+    inner_join(ens_map, by = "parameter") |>
+    select(ensemble_member, datetime, air_temperature, wind_speed)
+
+  # join per-ensemble weather with averaged FLARE covariates and add doy
+  forecast_input <- weather_input |>
+    left_join(forecast_covariates, by = "datetime") |>
     mutate(doy_sin = sin(2 * pi * lubridate::yday(datetime) / 365),
            doy_cos = cos(2 * pi * lubridate::yday(datetime) / 365)) |>
     drop_na()
-  
-  # predict mu, attach sigma
-  #also from Adrienne
-  forecast_input$mu    <- round(predict(dcm_model, forecast_input), digits = 2)
-  forecast_input$sigma <- round(sigma, digits = 2)
-  forecast_par <- forecast_input |>
-    select(datetime, mu, sigma) |>
-    pivot_longer(!datetime, names_to = "parameter", values_to = "prediction")  
 
+  # predict per ensemble member, then add process uncertainty noise per row
+  forecast_input$mu <- round(predict(dcm_model, forecast_input), digits = 2)
+  forecast_input$prediction <- forecast_input$mu + rnorm(nrow(forecast_input), mean = 0, sd = sigma)
+
+  forecast_par <- forecast_input |>
+    select(datetime, ensemble_member, prediction) |>
+    rename(parameter = ensemble_member)
 
   #### Format output to vera standard ####
   forecast_df <- forecast_par |>
     mutate(
-      family             = 'normal',
+      family             = 'ensemble',
       duration           = "P1D",
-      depth_m            = ifelse(forecast_depths == 'focal', NA_real_, as.numeric(forecast_depths)),
+      depth_m            = NA_real_, #this is ok
       variable           = var,
       project_id         = project_id,
       model_id           = model_id,
       site_id            = site,
-      reference_datetime = forecast_date
+      reference_datetime = forecast_date,
+      parameter          = as.numeric(parameter)
     ) |>
     select(datetime, reference_datetime, duration, site_id, depth_m,
            family, parameter, variable, prediction, model_id, project_id)
