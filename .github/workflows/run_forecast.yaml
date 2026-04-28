@@ -20,7 +20,7 @@ jobs:
       - name: Install
         shell: Rscript {0}
         run: |
-          install.packages(c("tidyverse", "arrow", "randomForest", "lubridate","zoo")) ## POPULATE THIS WITH ANY SPECIFIC PACKAGES YOU NEED
+          install.packages(c("tidyverse", "arrow", "randomForest", "lubridate","zoo","rLakeAnalyzer")) ## POPULATE THIS WITH ANY SPECIFIC PACKAGES YOU NEED
           remotes::install_github("LTREB-reservoirs/vera4castHelpers")
           
       - name: Generate forecasts
