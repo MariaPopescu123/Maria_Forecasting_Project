@@ -33,7 +33,7 @@ forecast_depths <- 'focal'
 forecast_horizon <- 31
 n_members <- 150
 calibration_start_date <- ymd("2022-11-11")
-model_id <- "fDCMdepth_mp"
+model_id <- "fCMdepth_mp"
 targets_url <- "https://amnh1.osn.mghpcc.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
 
 var <- "ChlorophyllMaximum_depth_sample"
