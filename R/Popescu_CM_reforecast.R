@@ -16,7 +16,7 @@ focal_site <- "fcre"
 
 all_forecast_dates <- seq(from = ymd("2025-04-01"),
                           to   = ymd("2026-04-01"),
-                          by   = "7 days")
+                          by   = "3 days")
 
 my_forecasts_full <- NULL
 # Load helper functions

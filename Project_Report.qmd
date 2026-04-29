@@ -174,8 +174,7 @@ ggplot(summarized_forecasts, aes(x = datetime, color = model_id, fill = model_id
 
 ```
 
-#May observations
-#Just plotting observations for September to see (Mine is only 7 days so I have to search to see which one is closest to the date)
+#September observations
 ```{r}
 targets_single_forecast <- targets |> 
   mutate(datetime = as_datetime(datetime))|>
@@ -270,8 +269,6 @@ pers_all <- all_forecasts_full |>
 #My forecast loaded in from R/Popescu_CM_reforecast.R
 
 ```{r}
-#| include: false
-
 my_forecasts_full <- read_csv("R/my_forecasts_full.csv")
 
 my_forecasts_full|>
@@ -329,6 +326,27 @@ ggplot(mean_crps_by_date, aes(x = reference_datetime, y = mean_crps, color = mod
 
 ```
 
+#Now to see by horizon if I filter for just the summer
+```{R}
+mean_crps_by_horizon_summer <- crps_full |>
+  filter(lubridate::month(reference_datetime) >= 3,
+         lubridate::month(reference_datetime) <= 10) |>
+  group_by(model_id, horizon) |>
+  summarise(mean_crps = mean(crps, na.rm = TRUE),
+            n = n(),
+            .groups = "drop")
+
+```
+
+#mean crps by horizon
+```{r}
+ggplot(mean_crps_by_horizon_summer, aes(x = horizon, y = mean_crps, color = model_id))+
+  geom_line() +
+  geom_point() +
+  labs(x = "horizon", y = "CRPS", color = "model")
+```
+
+
 #written interpretation of results
 My confidence interval is pretty wide due to process uncertainty from my random forest model which is definitely bringing my crps down. But when looking at the raw observations plotted on the models, mine does capture them. My model has better crps scores than climatology for some reference datetimes. I think what's bringing my score down for the horizon crps is the fact that my forecast does produce predictions through the winter (November-February) and climatology does not. So while those horizon crps scores are still being included in my plot for looking at crps with horizon, climatology does not (and it is thus outperforming my model). My process uncertainty could probably be decreased if I had more data for secchi and the temperature profiles that go into calculating schmidt stability (again my training data only starts from 2024-05 from FLARE). So especially when doing the reforecast analysis, technically only about a year of semi-sparse data is going in. 
 
@@ -338,7 +356,9 @@ Include:
 model_id: "fCMdepth_mp"
 GitHub repository link (this is a new repo): https://github.com/MariaPopescu123/Maria_Forecasting_Project  
 
-Link to forecast‑generation code: https://github.com/MariaPopescu123/Maria_Forecasting_Project/blob/main/Submit_forecast/mp_DCMdepth_Forecast.R
+Link to forecast‑generation code: https://github.com/MariaPopescu123/Maria_Forecasting_Project/blob/main/Submit_forecast/mp_CMdepth_Forecast.R
+
+and the helper function: https://github.com/MariaPopescu123/Maria_Forecasting_Project/blob/main/R/helper_functions.R
 
 Link to Quarto (.qmd) report: https://github.com/MariaPopescu123/Maria_Forecasting_Project/blob/main/Project_Report.qmd
 
