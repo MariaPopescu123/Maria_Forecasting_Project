@@ -220,6 +220,8 @@ generate_DCMdepth_forecast <- function(forecast_date,
   # uses bathymetry and temp-at-depth to compute daily Schmidt stability
  ####future schmidt####
   future_schmidt_ens <- df_flare_new_forbind |>
+    group_by(datetime_date, parameter, depth) |>
+    summarise(prediction = mean(prediction, na.rm = TRUE), .groups = "drop") |>
     group_by(datetime_date, parameter) |>
     arrange(depth) |>
     summarise(
@@ -299,6 +301,8 @@ generate_DCMdepth_forecast <- function(forecast_date,
   #per ensemble member from FLARE water temp profiles
   # uses bathymetry and temp-at-depth to compute daily Schmidt stability
   historic_schmidt_ens <- df_flare_new_forbind |>
+    group_by(datetime_date, parameter, depth) |>
+    summarise(prediction = mean(prediction, na.rm = TRUE), .groups = "drop") |>
     group_by(datetime_date, parameter) |>
     arrange(depth) |>
     summarise(
@@ -549,7 +553,7 @@ generate_DCMdepth_forecast <- function(forecast_date,
     pivot_wider(names_from = variable, values_from = prediction) |>
     rename(datetime = datetime_date) |>
     mutate(datetime = as.Date(datetime)) |>
-    inner_join(ens_map, by = "parameter") |>
+    inner_join(ens_map, by = "parameter", relationship = "many-to-many") |>
     select(ensemble_member, datetime, air_temperature, wind_speed)
 
   # join per-ensemble weather with averaged FLARE covariates and add doy
