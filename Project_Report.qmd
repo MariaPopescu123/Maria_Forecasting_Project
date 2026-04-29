@@ -18,10 +18,33 @@ Maria Popescu
 -My modelling approach is different than what we have developed in class together thus far. I am using random forest, and grid search hyperparameter tuning. I am also using FLARE output to train and predict my observations and am using new covariates (one of which I have to calculate within the model. I calculate schmidt stability from the bathymetry data and temperature profile output from FLARE).
 
 ##Uncertainty sources and implementation
--My forecasts produce 150 ensemeble members to provide uncertainty. Though the FLARE output (schmidt stability and secchi depth) is summarized to a daily mean to reduce driver uncertainty, the weather ensembles are still cycled through to produce 150 ensemble members and integrated in the forecast to provide driver uncertainty. I also have process uncertainty from the test data sd of residuals which is added iteratively to each forecast. 
+-My forecasts produce 150 ensemeble members to provide uncertainty. Though the FLARE output (schmidt stability and secchi depth) is summarized to a daily mean to reduce driver uncertainty, the weather ensembles are still cycled through to produce 150 ensemble members and integrated in the forecast to provide driver uncertainty. I also have process uncertainty from the test data sd of residuals which is added to each forecast. 
 
 ##Responses from the registration form
-NEED TO COMPLETE 
+
+Challenge: vera4cast
+model_id: fCMdepth_mp
+Long name: FCRE Chlorophyll Maximum Depth Random Forest
+Contact: Maria Popescu (mariapopescu100@gmail.com)
+Institution: Virginia Tech
+Code repository: https://github.com/MariaPopescu123/Maria_Forecasting_Project
+Model description
+modeling approach: Machine learning
+Describe your modeling approach: Using FLARE output of Secchi depth and temperature profiles (to calculate Schmidt stability), and NOAA output of wind speed and air temperature as covariates, random forest is used to predict chlorophyll maximum depth at Falling Creek Reservoir.
+Sources of Forecast Uncertainty
+Does the forecast use drivers?Yes
+Does the forecast include uncertainty from drivers?Yes
+Model drivers: Schmidt stability, Secchi depth, air temperature, wind speed
+Is the forecast model dynamic?No
+Initial condition uncertainty?No 
+Does the model include parameters?Yes, and at least one is estimated from data
+Parameter uncertainty?No
+Do you update your initial conditions or parameters between forecast submissions using newly available data (i.e., data assimilation)? Parameters
+What method did you use if you updated your initial conditions or parameters using data assimilation? Model refitting
+Does your forecast include uncertainty from the model (process uncertainty)? Yes and the uncertainty was estimated from data
+Does your forecast include uncertainty from measurement noise? No
+Does your forecast include uncertainty from using different models? No
+Does your forecast include uncertainty from parameter random effects? No
 
 
 #Part 2 – Reforecast Analysis
@@ -312,7 +335,7 @@ My confidence interval is pretty wide due to process uncertainty from my random 
 
 #Part 3 – Reproducibility Checklist
 Include:
-model_id: "fDCMdepth_mp"
+model_id: "fCMdepth_mp"
 GitHub repository link (this is a new repo): https://github.com/MariaPopescu123/Maria_Forecasting_Project  
 
 Link to forecast‑generation code: https://github.com/MariaPopescu123/Maria_Forecasting_Project/blob/main/Submit_forecast/mp_DCMdepth_Forecast.R
