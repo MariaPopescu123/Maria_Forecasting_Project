@@ -1,28 +1,34 @@
-#| include: false
-
 #questions for Quinn
 #we said 150 ensemble members but my CI is still wide (can I drop my met variable ensemble members too)
 #also for the reforecast currently I have it running for daily (can I just run it for weekly)
 #my automation not working
 #are there other ways I can reduce the amount of time it takes to run
+library(tidyverse)
+library(arrow)
+library(kableExtra)
+library(scoringRules)
+library(duckdbfs)
+
 set.seed(123)
 
+target_variable <- "ChlorophyllMaximum_depth_sample"
+focal_site <- "fcre"
 
 all_forecast_dates <- seq(from = ymd("2025-04-01"),
                           to   = ymd("2026-04-01"),
-                          by   = "14 days")
+                          by   = "7 days")
 
 my_forecasts_full <- NULL
 # Load helper functions
 helper.functions <- source("./R/helper_functions.R")
 #from mp_DCMdepth_Forecast.R
-sites <- c("fcre") #just FCR
+site <- c("fcre") #just FCR
 forecast_depths <- 'focal'
 
 forecast_horizon <- 31
 n_members <- 150
 calibration_start_date <- ymd("2022-11-11")
-model_id <- "fDCMdepth_mp"
+model_id <- "fCMdepth_mp"
 targets_url <- "https://amnh1.osn.mghpcc.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
 
 var <- "ChlorophyllMaximum_depth_sample"
@@ -33,7 +39,7 @@ message('Getting targets')
 #read once and reuse for all target subsets (avoids 4 separate downloads)
 all_targets <- readr::read_csv(targets_url, show_col_types = F) |>
   filter(site_id %in% site,
-         datetime <= forecast_date)
+         datetime <= as_date(Sys.Date()))
 
 targets <- all_targets |>
   filter(variable %in% var)
@@ -75,7 +81,7 @@ flare_ds1 <- arrow::open_dataset(list(
   arrow::open_dataset(fcre_reforecast2))) #using both for an extra couple of data points but still just up to May 2024
 #CHANGED HERE TO INCLUDE BOTH VERSIONS OF FLARE
 #start anytime after january 2021
-flare_ds <- flare_ds1|>
+flare_ds0 <- flare_ds1|>
   mutate(reference_datetime = as_date(reference_datetime))|>
   filter(reference_datetime >= ymd("2021-01-05"))
 
@@ -84,6 +90,8 @@ for (fdate in all_forecast_dates) {
   
   forecast_date <- as_date(fdate)
   #remove when done testing
+  flare_ds <- flare_ds0|>
+    filter(reference_datetime <= forecast_date)
   
   #pull FLARE forecast issued on/just before forecast_date so the future
   #covariates actually align with the forecast horizon
@@ -190,7 +198,7 @@ for (fdate in all_forecast_dates) {
       variable == "Temp_C_mean",
       parameter <= n_members,
       reference_datetime >= ymd("2021-01-05"),
-      reference_datetime <= forecast_date,
+      reference_datetime <= forecast_date, #no data leakage
       reference_datetime == datetime
     ) |>
     collect()
@@ -515,7 +523,7 @@ for (fdate in all_forecast_dates) {
            family, parameter, variable, prediction, model_id, project_id)
   
   
-  my_forecasts_full <- bind_rows(my_forecasts_full, reforecast_output)
+  my_forecasts_full <- bind_rows(my_forecasts_full, forecast_df)
 }
 library(readr)
 write_csv(my_forecasts_full, "R/my_forecasts_full.csv")

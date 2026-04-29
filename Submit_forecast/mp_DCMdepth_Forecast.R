@@ -74,8 +74,8 @@ for (i in sites){
   
   ## validate and submit forecast (uncomment when ready to submit)
   # print('Validating File...')
-  # vera4castHelpers::forecast_output_validator(forecast_file_abs_path)
-  # vera4castHelpers::submit(forecast_file_abs_path, s3_region = "submit", s3_endpoint = "ltreb-reservoirs.org", first_submission = FALSE)
+   vera4castHelpers::forecast_output_validator(forecast_file_abs_path)
+  vera4castHelpers::submit(forecast_file_abs_path, s3_region = "submit", s3_endpoint = "ltreb-reservoirs.org", first_submission = FALSE)
   
 } # end loop
 
