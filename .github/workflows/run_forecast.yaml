@@ -26,6 +26,6 @@ jobs:
       - name: Generate forecasts
         shell: Rscript {0}
         run: |
-          source("Submit_forecast/mp_DCMdepth_Forecast.R")
+          source("Submit_forecast/mp_CMdepth_Forecast.R")
           
     
