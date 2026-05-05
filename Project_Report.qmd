@@ -246,7 +246,6 @@ obs_all <- targets |>
 #only goes from 2025-01-08 - 2026-01-01
 dates_in_mine <- unique(my_forecasts_full$reference_datetime)
 
-
 clim_all <- all_forecasts_full |>
   filter(model_id == "climatology",
          variable == target_variable) |>
@@ -280,11 +279,16 @@ my_forecasts_full <- read_csv("R/my_forecasts_full.csv")
 my_forecasts_full|>
   arrange(reference_datetime, datetime, parameter)
 
+dates_in_clim_all <- unique(clim_all$reference_datetime)
+dates_in_pers_all <- unique(pers_all$reference_datetime)
+
 #from reforecasting assignment
 mine_all <- my_forecasts_full |>
   inner_join(obs_all, by = "datetime") |>
   filter(!is.na(observation), !is.na(prediction)) |>
   group_by(reference_datetime, datetime, model_id) |>
+  filter(reference_datetime %in% dates_in_clim_all, 
+         reference_datetime %in% dates_in_pers_all)|>
   summarise(
     crps = crps_sample(y = unique(observation), dat = prediction),
     .groups = "drop"
@@ -297,7 +301,9 @@ check <- my_forecasts_full|>
   arrange(horizon)
 
 crps_full <- bind_rows(clim_all, pers_all, mine_all)|>
-  mutate(horizon = as.numeric(difftime(datetime, reference_datetime, units = "days"))) #for the horizon
+  mutate(horizon = as.numeric(difftime(datetime, reference_datetime, units = "days")))|> #for the horizon
+  filter(reference_datetime %in% dates_in_clim_all, 
+         reference_datetime %in% dates_in_pers_all)
 
 mean_crps_by_horizon <- crps_full |>
   group_by(model_id, horizon) |>
